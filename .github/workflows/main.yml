@@ -1,0 +1,28 @@
+name: CI
+on:
+  schedule:
+  - cron: "0 * * * 2"
+jobs:
+  build:
+    env:
+      VERSION_FILE: .github/.remote_versions
+      TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@master
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        fetch-depth: 0
+    - name: Monitor remotes
+      run: |
+        git ls-remote https://github.com/blechschmidt/massdns.git HEAD >  "${VERSION_FILE}"
+        git ls-remote https://github.com/assetnote/commonspeak2-wordlists.git HEAD >> "${VERSION_FILE}"
+    - name: Push changes
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        if [ $(git status --porcelain=v1 2>/dev/null | wc -l) != "0" ]; then
+            git add "${VERSION_FILE}"
+            git commit -m "Remote version change" -a
+            git push "https://${GITHUB_ACTOR}:${TOKEN}@github.com/${GITHUB_REPOSITORY}.git" HEAD:${GITHUB_REF} --follow-tags
+        fi
