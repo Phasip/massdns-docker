@@ -1,0 +1,25 @@
+ame: DockerhubPusher
+on:
+  push:
+  workflow_dispatch:
+jobs:
+  build:
+    env:
+      USER: ${{ secrets.DOCKER_USERNAME }}
+      TOKEN: ${{ secrets.DOCKER_TOKEN }}
+      HUBREPO: ${{ secrets.DOCKER_REPO }}
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@master
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        fetch-depth: 0
+    - name: Login
+      run: |
+        docker login -u ${USER} -p ${TOKEN}
+    - name: Build
+      run: |
+        docker build . --file Dockerfile --tag ${USER}/${HUBREPO}:latest --tag ${USER}/${HUBREPO}:$(date +%s)
+    - name: Push
+      run: |
+        docker push ${USER}/${HUBREPO}
