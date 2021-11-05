@@ -1,4 +1,4 @@
-ame: DockerhubPusher
+name: DockerhubPusher
 on:
   push:
   workflow_dispatch:
