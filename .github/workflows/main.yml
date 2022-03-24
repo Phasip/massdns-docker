@@ -1,12 +1,16 @@
 name: CI
 on:
+  workflow_dispatch:
   schedule:
   - cron: "0 12 * * 2"
 jobs:
   build:
     env:
       VERSION_FILE: .github/.remote_versions
-      TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      GTOKEN: ${{ secrets.GITHUB_TOKEN }}
+      DTOKEN: ${{ secrets.DOCKER_TOKEN }}
+      DUSER: ${{ secrets.DOCKER_USERNAME }}
+      HUBREPO: ${{ secrets.DOCKER_REPO }}
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@master
@@ -17,12 +21,26 @@ jobs:
       run: |
         git ls-remote https://github.com/blechschmidt/massdns.git HEAD >  "${VERSION_FILE}"
         git ls-remote https://github.com/assetnote/commonspeak2-wordlists.git HEAD >> "${VERSION_FILE}"
+    - name: Check changes
+      id: check
+      run: |
+        if [ $(git status --porcelain=v1 2>/dev/null | wc -l) != "0" ]; then
+            echo "::set-output name=result::changed"
+        else
+            echo "::set-output name=result::unchanged"
+        fi
     - name: Push changes
+      if: steps.check.outputs.result == 'changed'
       run: |
         git config --local user.email "action@github.com"
         git config --local user.name "GitHub Action"
-        if [ $(git status --porcelain=v1 2>/dev/null | wc -l) != "0" ]; then
-            git add "${VERSION_FILE}"
-            git commit -m "Remote version change" -a
-            git push "https://${GITHUB_ACTOR}:${TOKEN}@github.com/${GITHUB_REPOSITORY}.git" HEAD:${GITHUB_REF} --follow-tags
-        fi
+        git add "${VERSION_FILE}"
+        git commit -m "Remote version change" -a
+        git push "https://${GITHUB_ACTOR}:${GTOKEN}@github.com/${GITHUB_REPOSITORY}.git" HEAD:${GITHUB_REF} --follow-tags
+    - name: Dockerdeploy
+      if: steps.check.outputs.result == 'changed' || github.event_name == 'workflow_dispatch'
+      run: |
+        docker login -u ${DUSER} -p ${DTOKEN}
+        docker build . --file Dockerfile --tag ${DUSER}/${HUBREPO}:latest --tag ${DUSER}/${HUBREPO}:$(date +%s)
+        docker push ${DUSER}/${HUBREPO}
+        
