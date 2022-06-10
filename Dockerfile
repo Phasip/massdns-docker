@@ -10,4 +10,5 @@ RUN apk --no-cache --virtual .deps add ldns-dev \
 ADD https://raw.githubusercontent.com/janmasarik/resolvers/master/resolvers.txt /resolvers.txt
 ADD https://raw.githubusercontent.com/assetnote/commonspeak2-wordlists/master/subdomains/subdomains.txt /subdomains.txt
 ADD online_resolver_massdns.sh /online_resolver_massdns.sh
+RUN apk add coreutils
 ENTRYPOINT ["/online_resolver_massdns.sh"]
